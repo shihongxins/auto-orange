@@ -1,0 +1,41 @@
+{
+  "name": "auto-orange",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "@varlet/ui": "^2.10.0",
+    "normalize.css": "^8.0.1",
+    "pinia": "^2.0.32",
+    "vue": "^3.2.47",
+    "vue-router": "4"
+  },
+  "devDependencies": {
+    "@rushstack/eslint-patch": "^1.2.0",
+    "@vitejs/plugin-vue": "^4.0.0",
+    "@vue/eslint-config-prettier": "^7.1.0",
+    "eslint": "^8.34.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-vue": "^9.11.0",
+    "postcss": "^8.4.23",
+    "postcss-html": "^1.5.0",
+    "postcss-preset-env": "^8.3.2",
+    "postcss-px-to-viewport": "^1.1.1",
+    "postcss-scss": "^4.0.6",
+    "prettier": "^2.8.8",
+    "rollup-plugin-copy": "^3.4.0",
+    "sass": "^1.62.1",
+    "unplugin-auto-import": "^0.15.3",
+    "unplugin-vue-components": "^0.24.1",
+    "vite": "^4.1.4",
+    "vite-plugin-eslint": "^1.8.1",
+    "vite-plugin-svg-icons": "^2.0.1"
+  }
+}
