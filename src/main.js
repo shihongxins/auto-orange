@@ -18,3 +18,5 @@ app.use(createPinia());
 app.component("svg-icon", SvgIcon);
 
 app.mount("#app");
+
+window.$vm = app;

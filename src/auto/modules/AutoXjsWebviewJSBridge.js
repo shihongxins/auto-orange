@@ -1,13 +1,44 @@
 /* eslint-disable */
+/**
+ * @typedef {object} webviewProxyer
+ * @property {Function} injectHandler - 注入通信SDK的web端;
+ * @property {(script: string, callback: Function) => {}} reflectHandler - 在web端执行一段js，获取回调;
+ * @property {eventsemitter} sdkemitter - webviewProxyer的生命周期 'setSetting', 'onPageStarted', 'onPageFinished', 'onReceivedError', 'ready';
+ * @param {*} webview
+ * @param {*} options
+ * @returns {object}
+ */
 function initWebviewProxy(webview, options) {
   if (!webview) {
     throw new Error("webview is required");
   }
+
+  let initiated = false;
+  let sdkemitter = events.emitter();
+
+  let webviewSettings = webview.getSettings();
+  //使webview控件支持JavaScript
+  webviewSettings.setJavaScriptEnabled(true);
+  if (options.local) {
+    //表示允许加载本地的文件
+    webviewSettings.setAllowFileAccess(true);
+    //设置是否允许通过 file url 加载的 Js代码读取其他的本地文件
+    webviewSettings.setAllowFileAccessFromFileURLs(true);
+    //设置是否允许通过 file url 加载的 Javascript 可以访问其他的源(包括http、https等源)
+    webviewSettings.setAllowUniversalAccessFromFileURLs(true);
+    //加载Java类用于shouldInterceptRequest拦截请求
+    importClass(java.net.URLConnection);
+    importClass(java.io.ByteArrayInputStream);
+    importClass(android.webkit.WebResourceResponse);
+  }
+  sdkemitter.emit("setSetting", webviewSettings);
+
   options = Object.assign({
+    debug: false,
     showLog: false,
     logFun: console.log,
-    protocol: "AutojsWebviewJSBridge://",
-    injectModuleName: "_autojs_",
+    protocol: "AutoXjsWebviewJSBridge://",
+    injectModuleName: "_autoxjs_",
     local: false,
   }, options || {});
 
@@ -47,9 +78,12 @@ function initWebviewProxy(webview, options) {
         "javascript:" + script,
         new JavaAdapter(android.webkit.ValueCallback, {
           /**
-           * @param {string} value 
+           * @param {string} value
            */
           onReceiveValue: (value) => {
+            try {
+              if (typeof value === "string") value = JSON.parse(value);
+            } catch (error) {}
             callback && callback(value);
           },
         })
@@ -65,30 +99,32 @@ function initWebviewProxy(webview, options) {
     reflectHandler(
       `
       ; (function (scope, factory, moduleName) {
-        scope[moduleName || factory.name] = factory();
-        return typeof scope[moduleName || factory.name] === "undefined";
+        moduleName = String(moduleName || factory.name);
+        scope[moduleName] = factory();
+        console.log(moduleName, scope, scope.name, scope[moduleName]);
+        return !(typeof scope[moduleName || factory.name] === "undefined");
       })(
         this || globalThis || window,
         function () {
-          function AutoJS() {
-            if (AutoJS._singleton_ || window["${options.injectModuleName}"]) {
-              return AutoJS._singleton_ || window["${options.injectModuleName}"];
+          function AutoXjs() {
+            if (AutoXjs._singleton_ || window["${options.injectModuleName}"]) {
+              return AutoXjs._singleton_ || window["${options.injectModuleName}"];
             }
             this._callbackStore_ = {};
             this._callbackIndex_ = 0;
           }
-          AutoJS.prototype._setCallback_ = function (callback) {
+          AutoXjs.prototype._setCallback_ = function (callback) {
             this._callbackStore_[++this._callbackIndex_] = callback;
             return this._callbackIndex_;
           }
-          AutoJS.prototype._getCallback_ = function (callbackIndex) {
+          AutoXjs.prototype._getCallback_ = function (callbackIndex) {
             let callback = this._callbackStore_[callbackIndex];
             if (callback) {
               delete this._callbackStore_[callbackIndex];
             }
             return callback;
           }
-          AutoJS.prototype.invoke = function (command, args, callback) {
+          AutoXjs.prototype.invoke = function (command, args, callback) {
             if (!(command && typeof command === "string")) {
               throw new Error("The 'command' must be a string");
             }
@@ -105,10 +141,10 @@ function initWebviewProxy(webview, options) {
               console.trace(error);
             }
           }
-          AutoJS.prototype.evaluate = function (command, callback) {
+          AutoXjs.prototype.evaluate = function (command, callback) {
             this.invoke(command, "_evaluate_", callback);
           }
-          AutoJS.prototype.callback = function (data) {
+          AutoXjs.prototype.callback = function (data) {
             if (data && data.callbackIndex) {
               let callback = this._getCallback_(data.callbackIndex);
               if (typeof callback === "function") {
@@ -116,16 +152,13 @@ function initWebviewProxy(webview, options) {
               }
             }
           }
-          AutoJS._singleton_ = new AutoJS();
-          return AutoJS._singleton_;
+          AutoXjs._singleton_ = new AutoXjs();
+          return AutoXjs._singleton_;
         },
         "${options.injectModuleName}"
       );
       `,
       function (injectResult) {
-        if (typeof injectResult === "string") {
-          try { injectResult = true } catch (error) { injectResult = false; };
-        }
         if (injectResult) {
           innerLog("📱注入成功✅");
           if (options && options.showLog) {
@@ -136,32 +169,42 @@ function initWebviewProxy(webview, options) {
             );
           }
         } else {
-          innerLog("📱注入失败❌");
+          innerLog("📱注入失败❌", injectResult);
         }
       }
     )
   }
 
-
-  let webviewSettings = webview.getSettings();
-  //使webview控件支持JavaScript
-  webviewSettings.setJavaScriptEnabled(true);
-  if (options.local) {
-    //表示允许加载本地的文件
-    webviewSettings.setAllowFileAccess(true);
-    //设置是否允许通过 file url 加载的 Js代码读取其他的本地文件
-    webviewSettings.setAllowFileAccessFromFileURLs(true);
-    //设置是否允许通过 file url 加载的 Javascript 可以访问其他的源(包括http、https等源)
-    webviewSettings.setAllowUniversalAccessFromFileURLs(true);
+  function initVConsole() {
+    innerLog("init vConsole");
+    reflectHandler(
+      `
+      (function() {
+        let script = document.createElement("script");
+        script.src = "https://unpkg.com/vconsole@latest/dist/vconsole.min.js";
+        script.onload = () => {
+          window.vConsole = new window.VConsole();
+          if (window[\"${options.injectModuleName}\"]) {
+            window[\"${options.injectModuleName}\"].evaluate(\'toastLog(\"✅init vConsole success.\")\');
+          }
+        };
+        script.onerror = () => {
+          if (window[\"${options.injectModuleName}\"]) {
+            window[\"${options.injectModuleName}\"].evaluate(\'toastLog(\"❌init vConsole fail.\")\');
+          }
+        }
+        document.documentElement.appendChild(script);
+      })();
+      `
+    );
   }
-
 
   webview.webViewClient = new JavaAdapter(android.webkit.WebViewClient, {
     /**
      * @see https://www.jianshu.com/p/7a237e7f055c
      * @see https://www.apiref.com/android-zh/android/webkit/WebViewClient.html
-     * @param {	android.webkit.WebView} webView 
-     * @param {android.webkit.WebResourceRequest} request 
+     * @param {android.webkit.WebView} webView
+     * @param {android.webkit.WebResourceRequest} request
      */
     shouldInterceptRequest: (webView, request) => {
       try {
@@ -173,9 +216,6 @@ function initWebviewProxy(webview, options) {
           if (relativePath) {
             let filePath = files.path(relativePath);
             if (filePath && files.isFile(filePath)) {
-              importClass(java.net.URLConnection);
-              importClass(java.io.ByteArrayInputStream);
-              importClass(android.webkit.WebResourceResponse);
               if (URLConnection && ByteArrayInputStream && WebResourceResponse) {
                 let byteArrIptStm = new ByteArrayInputStream(files.readBytes(filePath));
                 let mimeType = URLConnection.guessContentTypeFromName(filePath);
@@ -194,23 +234,34 @@ function initWebviewProxy(webview, options) {
         return null;
       }
     },
-    shouldOverrideUrlLoading: (webview, request) => {
-
-    },
     // 网页加载网页各种资源的回调
     onLoadResource: (webView, url) => {
     },
     /** 页面开始加载, 此时还没有加载 index.html 中的代码 */
     onPageStarted: (webView, url, favicon) => {
+      sdkemitter.emit("onPageStarted", webView, url, favicon);
     },
     /** 页面加载完成, 在 window.onload 之后触发 */
     onPageFinished: (webView, curUrl) => {
+      if (!initiated) {
+        injectHandler();
+        if (options.debug) {
+          reflectHandler(`Boolean(window.vConsole)`, (exsit) => {
+            if (!exsit) {
+              initVConsole();
+            }
+          })
+        }
+        initiated = true;
+      }
+      sdkemitter.emit("onPageFinished", webView, curUrl);
     },
     onReceivedError: (webView, webResourceRequest, webResourceError) => {
       let url = webResourceRequest.getUrl();
       let errorCode = webResourceError.getErrorCode();
       let description = webResourceError.getDescription();
       console.trace(errorCode + ' ' + description + ' ' + url);
+      sdkemitter.emit("onReceivedError", webView, webResourceRequest, webResourceError);
     },
   });
 
@@ -257,9 +308,16 @@ function initWebviewProxy(webview, options) {
     },
   });
 
-  injectHandler();
+  setTimeout(() => {
+    sdkemitter.emit("ready");
+  }, 0);
+
+  return {
+    reflectHandler,
+    sdkemitter,
+  }
 }
 
 module.exports = {
-  initWebviewProxy: initWebviewProxy,
+  initWebviewProxy,
 };

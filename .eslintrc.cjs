@@ -21,6 +21,7 @@ module.exports = {
     sourceType: "module",
   },
   plugins: ["prettier", "vue"],
+  globals: {},
   rules: {
     "prettier/prettier": "error",
     "no-var": "error",

@@ -12,60 +12,83 @@ import copy from "rollup-plugin-copy";
 
 import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
 
-const packageJson = require("./package.json");
-const projectName = packageJson.name || __dirname.split("\\").pop();
-const projectVersion = packageJson.version;
-
 // https://vitejs.dev/config/
-export default defineConfig({
-  base: "./",
-  build: {
-    outDir: projectName,
-  },
-  plugins: [
-    vue(),
-    eslintPlugin({
-      include: ["src/**/*.{vue,js,ts,jsx,tsx}"],
-    }),
-    components({
-      resolvers: [VarletUIResolver()],
-    }),
-    autoImport({
-      resolvers: [VarletUIResolver({ autoImport: true })],
-    }),
-    copy({
-      targets: [
-        {
-          src: "src/auto/**",
-          dest: "public",
-          transform: (_contents, name) => {
-            let contents = _contents.toString();
-            if (name === "project.json") {
-              const contentsObj = JSON.parse(contents);
-              contentsObj.name = projectName;
-              contentsObj.packageName = `com.autoxjs.${projectName}`;
-              contentsObj.versionName = projectVersion;
-              contentsObj.versionCode = parseInt(projectVersion);
-              contents = JSON.stringify(contentsObj);
-            }
-            return contents;
-          },
-        },
-      ],
-      verbose: true,
-    }),
-    createSvgIconsPlugin({
-      iconDirs: [path.resolve(process.cwd(), "src/assets/svgs")],
-      symbolId: "icon-[dir]-[name]",
-    }),
-  ],
-  resolve: {
-    alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url)),
+export default defineConfig(({ mode }) => {
+  console.log(mode);
+  const config = {
+    plugins: [
+      vue(),
+      eslintPlugin({
+        include: ["src/**/*.{vue,js,ts,jsx,tsx}"],
+      }),
+      components({
+        resolvers: [VarletUIResolver()],
+      }),
+      autoImport({
+        resolvers: [VarletUIResolver({ autoImport: true })],
+      }),
+      createSvgIconsPlugin({
+        iconDirs: [path.resolve(process.cwd(), "src/assets/svgs")],
+        symbolId: "icon-[dir]-[name]",
+      }),
+    ],
+    resolve: {
+      alias: {
+        "@": fileURLToPath(new URL("./src", import.meta.url)),
+      },
     },
-  },
-  css: {
-    preprocessorOptions: {},
-    postcss: "postcss.config.cjs",
-  },
+    css: {
+      preprocessorOptions: {},
+      postcss: "postcss.config.cjs",
+    },
+  };
+  // vite build -m autoxjs-local
+  if (mode === "autoxjs-local") {
+    const packageJson = require("./package.json");
+    const authorName = packageJson?.author?.name || "autoxjs";
+    const projectName = packageJson.name || __dirname.split("\\").pop();
+    const projectVersion = packageJson.version;
+    const AppPackageName = `com.${authorName}.${projectName}`.replace(/[^\w.]/g, "_").toLowerCase();
+
+    config.base = "./";
+    config.build = Object.assign(config.build || {}, {
+      outDir: projectName,
+      rollupOptions: {
+        output: {
+          format: "umd",
+          entryFileNames: "[name].mjs",
+          chunkFileNames: "assets/[name]-[hash].mjs",
+        },
+      },
+    });
+    config.plugins = [
+      ...config.plugins,
+      copy({
+        verbose: true,
+        targets: [
+          {
+            src: ["src/auto/**/*", "!src/auto/modules/**/*"],
+            dest: "public",
+          },
+          {
+            src: "src/auto/project.json",
+            dest: "public",
+            transform: (_contents, name) => {
+              let contents = _contents.toString();
+              if (name === "project.json") {
+                const contentsObj = JSON.parse(contents);
+                contentsObj.name = contentsObj.name || projectName;
+                contentsObj.packageName = AppPackageName;
+                contentsObj.versionName = projectVersion;
+                contentsObj.versionCode = parseInt(projectVersion) || 0;
+                contents = JSON.stringify(contentsObj);
+              }
+              return contents;
+            },
+          },
+        ],
+      }),
+    ];
+  }
+  return config;
 });

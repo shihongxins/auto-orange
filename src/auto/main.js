@@ -1,29 +1,36 @@
 /* eslint-disable */
 'ui';
+
+initUI("./index.html");
+// initUI("https://www.baidu.com");
+
+/**
+ * @see https://www.jianshu.com/p/6e69332cf946
+ * @see https://www.apiref.com/android-zh/android/webkit/WebView.html#loadDataWithBaseURL
+ * @see https://www.apiref.com/android-zh/android/text/Html.html
+ * @param {string} href
+ * @returns
+ */
 function initUI(href) {
   ui.layout('<webview id="webview" h="*" w="*" />');
-  let SDK = require("AutojsWebviewJSBridge.js");
+  let SDK = require(files.path("./modules/AutoXjsWebviewJSBridge"));
   let local = !(/^http(s):\/\//i.test(href));
-  SDK.initWebviewProxy(ui.webview, { showLog: true, local: Boolean(href && local) });
-  setTimeout(() => {
+  let SDKInstance = SDK.initWebviewProxy(ui.webview, { debug: true, showLog: true, local: Boolean(href && local) });
+  SDKInstance.sdkemitter.on("ready", () => {
     if (href) {
-      if (local) {
+      if (local && /\.(xml|html?s?)$/i.test(href)) {
         let htmlPath = files.path(href);
         if (htmlPath && files.exists(htmlPath)) {
           let htmlContent = files.read(htmlPath);
           ui.webview.loadDataWithBaseURL("http://127.0.0.1:8080", htmlContent, 'text/html', 'UTF-8', 'http://127.0.0.1:8080')
         }
-        return;
       } else {
         ui.webview.loadUrl(href);
       }
     }
-  }, 500);
+  });
   return ui.webview;
 }
-
-initUI("./index.html");
-// initUI("https://www.baidu.com");
 
 let threadPool = {};
 
@@ -32,6 +39,7 @@ if (!threadPool.back) {
     function () {
       let _t, _i;
       ui.emitter.on("back_pressed", function (ev) {
+        console.log("back_pressed");
         if (ui && ui.webview) {
           if (ui.webview.canGoBack()) {
             ui.webview.goBack();
@@ -53,4 +61,21 @@ if (!threadPool.back) {
       });
     }
   )
+}
+
+function uninstallApp() {
+  let AppPackageName = "";
+  const projectJson = files.exists("./project.json") && files.read("./project.json");
+  if (projectJson) {
+    let project;
+    try {
+      project = JSON.parse(projectJson);
+      AppPackageName = project.packageName || "";
+    } catch (error) {}
+  }
+  if (AppPackageName) {
+    app.uninstall(AppPackageName);
+  } else {
+    toastLog("未找到软件包名，请手动卸载");
+  }
 }
