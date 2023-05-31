@@ -1,28 +1,41 @@
 /* eslint-disable */
-'ui';
+"ui";
 
-initUI("./index.html");
-// initUI("https://www.baidu.com");
+global.SDKInstance = null;
+
+// initUI("https://auto-orange.shihongxins.surge.sh");
+
+global.localOrigin = "http://127.0.0.1:8080";
+initUI("./index.html", global.localOrigin);
 
 /**
  * @see https://www.jianshu.com/p/6e69332cf946
  * @see https://www.apiref.com/android-zh/android/webkit/WebView.html#loadDataWithBaseURL
  * @see https://www.apiref.com/android-zh/android/text/Html.html
  * @param {string} href
+ * @param {string} localOrigin
  * @returns
  */
-function initUI(href) {
+function initUI(href, localOrigin) {
   ui.layout('<webview id="webview" h="*" w="*" />');
   let SDK = require(files.path("./modules/AutoXjsWebviewJSBridge"));
-  let local = !(/^http(s):\/\//i.test(href));
-  let SDKInstance = SDK.initWebviewProxy(ui.webview, { debug: true, showLog: true, local: Boolean(href && local) });
-  SDKInstance.sdkemitter.on("ready", () => {
+  let local = !/^http(s):\/\//i.test(href);
+  global.SDKInstance = SDK.initWebviewProxy(ui.webview, {
+    debug: true,
+    showLog: true,
+    local: Boolean(href && local),
+    localOrigin,
+  });
+  global.SDKInstance.sdkemitter.on("ready", () => {
     if (href) {
       if (local && /\.(xml|html?s?)$/i.test(href)) {
         let htmlPath = files.path(href);
         if (htmlPath && files.exists(htmlPath)) {
           let htmlContent = files.read(htmlPath);
-          ui.webview.loadDataWithBaseURL("http://127.0.0.1:8080", htmlContent, 'text/html', 'UTF-8', 'http://127.0.0.1:8080')
+          if (!localOrigin) {
+            localOrigin = "http://127.0.0.1:8080";
+          }
+          ui.webview.loadDataWithBaseURL(localOrigin, htmlContent, "text/html", "UTF-8", localOrigin);
         }
       } else {
         ui.webview.loadUrl(href);
@@ -32,50 +45,42 @@ function initUI(href) {
   return ui.webview;
 }
 
-let threadPool = {};
+// 其他全局函数
+require("./globalFun");
 
-if (!threadPool.back) {
-  threadPool.back = threads.start(
-    function () {
-      let _t, _i;
-      ui.emitter.on("back_pressed", function (ev) {
-        console.log("back_pressed");
-        if (ui && ui.webview) {
-          if (ui.webview.canGoBack()) {
-            ui.webview.goBack();
-            ev.consumed = true;
-            return;
-          }
-          if (++_i > 1) {
-            threads.shutDownAll();
-            ev.consumed = false;
-            exit();
-          }
-          _t && clearTimeout(_t);
-          _t = setTimeout(() => {
-            toast("连按两次返回键退出");
-            _i = 0;
-          }, 500);
+global.threadPool = {};
+
+if (!global.threadPool.back) {
+  threadPool.back = threads.start(function () {
+    let _t = 0,
+      _i = 0;
+    ui.emitter.on("back_pressed", function (ev) {
+      if (ui && ui.webview) {
+        let url = ui.webview.getUrl();
+        // 本地 html 模式，无法通过 webview.goBack() 返回，交由页面调用
+        if (url.indexOf(localOrigin) === 0) {
+          toastLog("本地模式，路由由页面实现");
           ev.consumed = true;
+          return;
         }
-      });
-    }
-  )
-}
+        if (ui.webview.canGoBack()) {
+          ui.webview.goBack();
+          ev.consumed = true;
+          return;
+        }
 
-function uninstallApp() {
-  let AppPackageName = "";
-  const projectJson = files.exists("./project.json") && files.read("./project.json");
-  if (projectJson) {
-    let project;
-    try {
-      project = JSON.parse(projectJson);
-      AppPackageName = project.packageName || "";
-    } catch (error) {}
-  }
-  if (AppPackageName) {
-    app.uninstall(AppPackageName);
-  } else {
-    toastLog("未找到软件包名，请手动卸载");
-  }
+        toast("连按两次返回键退出");
+        _t && clearTimeout(_t);
+        _t = setTimeout(() => {
+          _i = 0;
+        }, 500);
+
+        if (++_i > 1) {
+          threads.shutDownAll();
+          exit();
+        }
+        ev.consumed = true;
+      }
+    });
+  });
 }

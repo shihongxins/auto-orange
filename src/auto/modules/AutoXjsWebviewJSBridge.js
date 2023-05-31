@@ -19,6 +19,8 @@ function initWebviewProxy(webview, options) {
   let webviewSettings = webview.getSettings();
   //使webview控件支持JavaScript
   webviewSettings.setJavaScriptEnabled(true);
+  //设置是否启用DOM存储API
+  webviewSettings.setDomStorageEnabled(true);
   if (options.local) {
     //表示允许加载本地的文件
     webviewSettings.setAllowFileAccess(true);
@@ -36,10 +38,11 @@ function initWebviewProxy(webview, options) {
   options = Object.assign({
     debug: false,
     showLog: false,
+    local: false,
+    localOrigin: "http://127.0.0.1:8080",
     logFun: console.log,
     protocol: "AutoXjsWebviewJSBridge://",
     injectModuleName: "_autoxjs_",
-    local: false,
   }, options || {});
 
   function innerLog() {
@@ -101,7 +104,6 @@ function initWebviewProxy(webview, options) {
       ; (function (scope, factory, moduleName) {
         moduleName = String(moduleName || factory.name);
         scope[moduleName] = factory();
-        console.log(moduleName, scope, scope.name, scope[moduleName]);
         return !(typeof scope[moduleName || factory.name] === "undefined");
       })(
         this || globalThis || window,
@@ -210,9 +212,9 @@ function initWebviewProxy(webview, options) {
       try {
         /** @type {java.lang.String} */
         let url = request.getUrl().toString();
-        if (url && /^((file:\/\/)|http:\/\/127.0.0.1:8080)/.test(url) && options.local) {
+        if (url && (/^file:\/\//i.test(url) || url.indexOf(options.localOrigin) === 0) && options.local) {
           let cwd = files.cwd();
-          const relativePath = url.replace("file://" + cwd, ".").replace("http://127.0.0.1:8080", ".");
+          const relativePath = url.replace("file://" + cwd, ".").replace(options.localOrigin, ".");
           if (relativePath) {
             let filePath = files.path(relativePath);
             if (filePath && files.isFile(filePath)) {
