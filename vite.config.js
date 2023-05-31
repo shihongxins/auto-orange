@@ -14,7 +14,11 @@ import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  console.log(mode);
+  // const env = loadEnv(mode, process.cwd(), "");
+
+  // console.log(mode, env);
+  const packageJson = require("./package.json");
+
   const config = {
     plugins: [
       vue(),
@@ -41,13 +45,16 @@ export default defineConfig(({ mode }) => {
       preprocessorOptions: {},
       postcss: "postcss.config.cjs",
     },
+    define: {
+      _autoxjs_: mode === "development" ? {} : null,
+      projectVersion: JSON.stringify(packageJson.version),
+    },
   };
   // vite build -m autoxjs-local
   if (mode === "autoxjs-local") {
-    const packageJson = require("./package.json");
     const authorName = packageJson?.author?.name || "autoxjs";
     const projectName = packageJson.name || __dirname.split("\\").pop();
-    const projectVersion = packageJson.version;
+    const projectVersion = JSON.stringify(packageJson.version);
     const AppPackageName = `com.${authorName}.${projectName}`.replace(/[^\w.]/g, "_").toLowerCase();
 
     config.base = "./";

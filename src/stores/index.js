@@ -1,9 +1,9 @@
-import { defineStore } from "pinia";
+import { createPinia } from "pinia";
 
-export const useMainStore = defineStore("main", {
-  state: () => {
-    return {
-      showInstructions: true,
-    };
-  },
-});
+export const localStorageKeys = {
+  UNLOCK: "LOCALSTORAGEKEY_UNLOCK",
+};
+
+const $pinia = createPinia();
+
+export default $pinia;

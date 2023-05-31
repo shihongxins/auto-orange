@@ -21,9 +21,9 @@
           route="/dy_groups_tasks"
         ></MenuCard>
       </li>
-      <li class="menu-item">
+      <!-- <li class="menu-item">
         <MenuCard icon="tiktok" title="抖音-自动看视频"></MenuCard>
-      </li>
+      </li> -->
     </ul>
   </main>
 </template>

@@ -1,8 +1,9 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHashHistory } from "vue-router";
+import { useMainStore } from "../stores/main";
 import HomePage from "@/pages/HomePage.vue";
 
 export const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes: [
     {
       path: "/",
@@ -18,4 +19,9 @@ export const router = createRouter({
       component: () => import("../pages/DYGroupsTasks.vue"),
     },
   ],
+});
+
+router.beforeEach(() => {
+  const mainStore = useMainStore();
+  mainStore.validateExpires();
 });

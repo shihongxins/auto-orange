@@ -1,6 +1,6 @@
 import { createApp } from "vue";
 import { router } from "./router";
-import { createPinia } from "pinia";
+import pinia from "./stores";
 import App from "./App.vue";
 import "normalize.css";
 import "./assets/styles/main.scss";
@@ -13,10 +13,11 @@ import SvgIcon from "./components/SvgIcon.vue";
 const app = createApp(App);
 
 app.use(router);
-app.use(createPinia());
+app.use(pinia);
 
 app.component("svg-icon", SvgIcon);
 
 app.mount("#app");
 
 window.$vm = app;
+window.$pinia = pinia;
