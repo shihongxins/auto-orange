@@ -21,7 +21,7 @@ function initUI(href, localOrigin) {
   let SDK = require(files.path("./modules/AutoXjsWebviewJSBridge"));
   let local = !/^http(s):\/\//i.test(href);
   global.SDKInstance = SDK.initWebviewProxy(ui.webview, {
-    debug: true,
+    debug: false,
     showLog: true,
     local: Boolean(href && local),
     localOrigin,
@@ -59,7 +59,7 @@ if (!global.threadPool.back) {
         let url = ui.webview.getUrl();
         // 本地 html 模式，无法通过 webview.goBack() 返回，交由页面调用
         if (url.indexOf(localOrigin) === 0) {
-          toastLog("本地模式，路由由页面实现");
+          toastLog("无法响应返回/退出，请于应用内操作");
           ev.consumed = true;
           return;
         }

@@ -1,7 +1,5 @@
 <script setup>
   import { ActionSheet, Snackbar } from "@varlet/ui";
-  import "@varlet/ui/es/action-sheet/style/index.mjs";
-  import "@varlet/ui/es/snackbar/style/index.mjs";
   import { useMainStore } from "../stores/main";
   import { ref } from "vue";
   const mainStore = useMainStore();
@@ -79,6 +77,12 @@
       window._autoxjs_.evaluate(`app.startActivity("${activity}")`);
     }
   };
+
+  const exitApp = () => {
+    if (window._autoxjs_) {
+      window._autoxjs_.evaluate(`exitApp()`);
+    }
+  };
 </script>
 
 <template>
@@ -87,7 +91,7 @@
       <var-cell border ripple icon="warning" title="软件说明" @click="mainStore.appNoticeType = 'intro'"></var-cell>
       <var-cell border ripple title="解锁状态" :description="mainStore.unlock.desc" @click="chooseUnlockItem">
         <template #icon>
-          <SvgIcon name="lock" size="5.333333vw"></SvgIcon>
+          <SvgIcon :name="mainStore.unlock.status ? 'unlock' : 'lock'" size="5.333333vw"></SvgIcon>
         </template>
       </var-cell>
       <var-cell
@@ -98,6 +102,11 @@
         @click="openAppActivity('console')"
       ></var-cell>
       <var-cell border ripple icon="cog" title="高级设置" @click="openAppActivity('settings')"></var-cell>
+      <var-cell border ripple title="退出" @click="exitApp">
+        <template #icon>
+          <SvgIcon name="exit" size="5.333333vw"></SvgIcon>
+        </template>
+      </var-cell>
     </var-paper>
     <var-dialog
       title="已有解锁码"

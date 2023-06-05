@@ -1,4 +1,9 @@
 /* eslint-disable */
+global.exitApp = function exitApp() {
+  ui.finish();
+  exit();
+}
+
 global.uninstallApp = function uninstallApp() {
   let AppPackageName = "";
   const projectJson = files.exists("./project.json") && files.read("./project.json");
@@ -7,7 +12,7 @@ global.uninstallApp = function uninstallApp() {
     try {
       project = JSON.parse(projectJson);
       AppPackageName = project.packageName || "";
-    } catch (error) {}
+    } catch (error) { }
   }
   if (AppPackageName) {
     app.uninstall(AppPackageName);
@@ -22,14 +27,15 @@ global.downloadRemoteModule = function downloadRemoteModule(src, name) {
     if (!src) {
       throw new Error("unknown remote module path");
     }
+    let reg = /^([^\s:]+:)?(\/\/)?([^:/&?%]+)(:(\d+))?(.*\/)?([^:/&?]*?\.\w+)?([^.]*?(\?.*)?)?$/gm;
+    let matched = reg.exec(src);
     if (!name) {
-      let reg = /^([^\s:]+:)?(\/\/)?([^:/&?%]+)(:(\d+))?(.*\/)?([^:/&?]*?\.\w+)?([^.]*?(\?.*)?)?$/gm;
-      let matched = reg.exec(src);
       if (matched && matched[7]) {
         name = matched[7];
       }
-      name = name || `temp${parseInt(Math.random()*100)}`;
+      name = name || `temp${parseInt(Math.random() * 100)}`;
     }
+    src = src + ((matched && matched[9]) ? '&time=' : '?time=') + Date.now();
     let result = events.emitter(threads.currentThread());
     downloadThread = threads.start(() => {
       try {
@@ -58,7 +64,6 @@ global.downloadRemoteModule = function downloadRemoteModule(src, name) {
       return { error };
     })
     .then((result) => {
-      console.log("download result", result);
       return result;
     });
 }
@@ -80,7 +85,6 @@ global.execRemoteFun = function execRemoteFun(src, attr, args) {
       return { error };
     })
     .then((result) => {
-      console.log("exec result", result);
       return result;
     });
 }
@@ -105,7 +109,7 @@ global.unlockApp = function unlockApp(id, price) {
     })
     .catch((error) => {
       toastLog("解锁支付失败");
-      return {error};
+      return { error };
     }).finally(() => {
       global.SDKInstance.reflectHandler(
         `
