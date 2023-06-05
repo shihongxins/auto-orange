@@ -4,14 +4,14 @@
 global.SDKInstance = null;
 
 // 本地开发
-initUI("http://192.168.1.46:5173/");
+// initUI("http://192.168.1.46:5173/");
 
 // 部署远程
 // initUI("https://auto-orange.shihongxins.surge.sh");
 
 // 部署本地
-// global.localOrigin = "http://127.0.0.1:8080";
-// initUI("./index.html", global.localOrigin);
+global.localOrigin = "http://127.0.0.1:8080";
+initUI("./index.html", global.localOrigin);
 
 /**
  * @see https://www.jianshu.com/p/6e69332cf946
@@ -26,8 +26,8 @@ function initUI(href, localOrigin) {
   let SDK = require(files.path("./modules/AutoXjsWebviewJSBridge"));
   let local = !/^http(s):\/\//i.test(href);
   global.SDKInstance = SDK.initWebviewProxy(ui.webview, {
-    debug: true,
-    showLog: true,
+    debug: false,
+    showLog: false,
     OmitSSLError: true,
     MixedContentMode: 0,
     local: Boolean(href && local),

@@ -98,6 +98,7 @@ export const useMainStore = defineStore("main", {
             clearTimeout(timer);
             resolve(status);
           }
+          times++;
         }, 500);
       }).catch(() => "fail");
       this.globalLoading = false;

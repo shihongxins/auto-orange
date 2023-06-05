@@ -15,7 +15,7 @@
     groupName: "",
     groups: [],
     selectedGroups: [],
-    sleepTime: 2,
+    sleepTime: 3,
     randomComments: "",
     enableCopyComment: false,
     enableSpeedUp: false,
