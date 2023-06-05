@@ -9,19 +9,45 @@ export const router = createRouter({
       path: "/",
       alias: "/home",
       component: HomePage,
+      meta: {
+        theme: {
+          color: "#ffa500",
+        },
+      },
     },
     {
       path: "/setting",
       component: () => import("../pages/SettingPage.vue"),
+      meta: {
+        theme: {
+          color: "#ffa500",
+        },
+      },
     },
     {
       path: "/dy_groups_tasks",
       component: () => import("../pages/DYGroupsTasks.vue"),
+      meta: {
+        theme: {
+          color: "#ffa500",
+        },
+      },
     },
   ],
 });
 
-router.beforeEach(() => {
+router.beforeEach((to) => {
   const mainStore = useMainStore();
   mainStore.validateExpires();
+  if (to.meta?.theme?.color) {
+    if (window._autoxjs_) {
+      setTimeout(() => {
+        window._autoxjs_.evaluate(
+          `
+            ui.statusBarColor("${to.meta?.theme?.color}");
+          `
+        );
+      }, 0);
+    }
+  }
 });

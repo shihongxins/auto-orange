@@ -19,7 +19,7 @@
     randomComments: "",
     enableCopyComment: false,
     enableSpeedUp: false,
-    shortestTime: 15,
+    shortestTime: "15",
     enableLimitTime: false,
     runtime: "10",
   });
@@ -113,13 +113,7 @@
 </script>
 
 <template>
-  <var-app-bar
-    style="z-index: 99"
-    title="抖音-群聊活跃度"
-    title-position="center"
-    safe-area-top
-    color="linear-gradient(90deg, orange 0%, orangered 100%)"
-  >
+  <var-app-bar style="z-index: 99" title="抖音-群聊活跃度" title-position="center" safe-area-top color="#ffa500">
     <template #left>
       <var-button text round @click="router.push('/')">
         <var-icon name="chevron-left" :size="24" />

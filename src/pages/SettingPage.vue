@@ -94,6 +94,7 @@
           <SvgIcon :name="mainStore.unlock.status ? 'unlock' : 'lock'" size="5.333333vw"></SvgIcon>
         </template>
       </var-cell>
+      <!--
       <var-cell
         border
         ripple
@@ -101,6 +102,7 @@
         title="运行日志"
         @click="openAppActivity('console')"
       ></var-cell>
+      -->
       <var-cell border ripple icon="cog" title="高级设置" @click="openAppActivity('settings')"></var-cell>
       <var-cell border ripple title="退出" @click="exitApp">
         <template #icon>
