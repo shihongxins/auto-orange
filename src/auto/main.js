@@ -21,8 +21,10 @@ function initUI(href, localOrigin) {
   let SDK = require(files.path("./modules/AutoXjsWebviewJSBridge"));
   let local = !/^http(s):\/\//i.test(href);
   global.SDKInstance = SDK.initWebviewProxy(ui.webview, {
-    debug: false,
+    debug: true,
     showLog: true,
+    OmitSSLError: true,
+    MixedContentMode: 0,
     local: Boolean(href && local),
     localOrigin,
   });

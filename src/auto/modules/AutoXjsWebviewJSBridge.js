@@ -4,8 +4,17 @@
  * @property {Function} injectHandler - 注入通信SDK的web端;
  * @property {(script: string, callback: Function) => {}} reflectHandler - 在web端执行一段js，获取回调;
  * @property {eventsemitter} sdkemitter - webviewProxyer的生命周期 'setSetting', 'onPageStarted', 'onPageFinished', 'onReceivedError', 'ready';
- * @param {*} webview
- * @param {*} options
+ * @param {android.webkit.WebView} webview - 安卓显示网页的视图控件
+ * @param {object} options - 控件宿主配置
+ * @param {boolean} options.debug - 启用页面 vConsole 调试
+ * @param {boolean} options.showLog - 启用宿主运行日志打印
+ * @param {Function} options.logFun - 宿主打印日志方法
+ * @param {boolean} options.OmitSSLError - 忽略远程访问 https 时 SSL 证书错误
+ * @param {0|1|2} options.MixedContentMode - 配置远程 https 和 http 混合内容模式
+ * @param {boolean} options.local - 本地模式
+ * @param {string} options.localOrigin - 本地模式模拟域名
+ * @param {string} options.protocol - 页面与宿主的通讯协议
+ * @param {string} options.injectModuleName - 命名注入页面的模块
  * @returns {object}
  */
 function initWebviewProxy(webview, options) {
@@ -13,14 +22,30 @@ function initWebviewProxy(webview, options) {
     throw new Error("webview is required");
   }
 
+  options = Object.assign({
+    debug: false,
+    showLog: false,
+    OmitSSLError: false,
+    MixedContentMode: 1,
+    local: false,
+    localOrigin: "http://127.0.0.1:8080",
+    logFun: console.log,
+    protocol: "AutoXjsWebviewJSBridge://",
+    injectModuleName: "_autoxjs_",
+  }, options || {});
+
   let initiated = false;
   let sdkemitter = events.emitter();
 
   let webviewSettings = webview.getSettings();
+  //打印代理字符串
+  options.showLog && console.log("getUserAgentString", webviewSettings.getUserAgentString());
   //使webview控件支持JavaScript
   webviewSettings.setJavaScriptEnabled(true);
   //设置是否启用DOM存储API
   webviewSettings.setDomStorageEnabled(true);
+  //设置 http 和 https 混合使用
+  webviewSettings.setMixedContentMode(parseInt(options.MixedContentMode) || 1);
   if (options.local) {
     //表示允许加载本地的文件
     webviewSettings.setAllowFileAccess(true);
@@ -34,16 +59,6 @@ function initWebviewProxy(webview, options) {
     importClass(android.webkit.WebResourceResponse);
   }
   sdkemitter.emit("setSetting", webviewSettings);
-
-  options = Object.assign({
-    debug: false,
-    showLog: false,
-    local: false,
-    localOrigin: "http://127.0.0.1:8080",
-    logFun: console.log,
-    protocol: "AutoXjsWebviewJSBridge://",
-    injectModuleName: "_autoxjs_",
-  }, options || {});
 
   function innerLog() {
     if (options && options.showLog && typeof options.logFun === "function") {
@@ -86,7 +101,7 @@ function initWebviewProxy(webview, options) {
           onReceiveValue: (value) => {
             try {
               if (typeof value === "string") value = JSON.parse(value);
-            } catch (error) {}
+            } catch (error) { }
             callback && callback(value);
           },
         })
@@ -185,9 +200,14 @@ function initWebviewProxy(webview, options) {
         let script = document.createElement("script");
         script.src = "https://unpkg.com/vconsole@latest/dist/vconsole.min.js";
         script.onload = () => {
-          window.vConsole = new window.VConsole();
-          if (window[\"${options.injectModuleName}\"]) {
-            window[\"${options.injectModuleName}\"].evaluate(\'toastLog(\"✅init vConsole success.\")\');
+          try {
+            window.vConsole = new window.VConsole();
+            if (window[\"${options.injectModuleName}\"]) {
+              window[\"${options.injectModuleName}\"].evaluate(\'toastLog(\"✅init vConsole success.\")\');
+            }
+          } catch (error) {
+            console.error("❌init vConsole error.", error);
+            throw new Error(error);
           }
         };
         script.onerror = () => {
@@ -213,6 +233,7 @@ function initWebviewProxy(webview, options) {
         /** @type {java.lang.String} */
         let url = request.getUrl().toString();
         if (url && (/^file:\/\//i.test(url) || url.indexOf(options.localOrigin) === 0) && options.local) {
+          options.showLog && console.log("shouldInterceptRequest: ", url);
           let cwd = files.cwd();
           const relativePath = url.replace("file://" + cwd, ".").replace(options.localOrigin, ".");
           if (relativePath) {
@@ -220,10 +241,15 @@ function initWebviewProxy(webview, options) {
             if (filePath && files.isFile(filePath)) {
               if (URLConnection && ByteArrayInputStream && WebResourceResponse) {
                 let byteArrIptStm = new ByteArrayInputStream(files.readBytes(filePath));
-                let mimeType = URLConnection.guessContentTypeFromName(filePath);
+                let mimeType = URLConnection.guessContentTypeFromName(filePath) || URLConnection.guessContentTypeFromStream(byteArrIptStm);
                 if (!mimeType) {
-                  mimeType = URLConnection.guessContentTypeFromStream(byteArrIptStm);
+                  let ext = files.getExtension(filePath);
+                  let isJS = ["js", "mjs", "cjs", "jsx"].indexOf(String(ext).toString());
+                  if (isJS > -1) {
+                    mimeType = "text/javascript";
+                  }
                 }
+                options.showLog && console.log(`MIME type of "${filePath}" is "${mimeType}"`);
                 return new WebResourceResponse(mimeType, "UTF-8", byteArrIptStm);
               }
             }
@@ -238,6 +264,7 @@ function initWebviewProxy(webview, options) {
     },
     // 网页加载网页各种资源的回调
     onLoadResource: (webView, url) => {
+      options.showLog && console.log("onLoadResource: " + url);
     },
     /** 页面开始加载, 此时还没有加载 index.html 中的代码 */
     onPageStarted: (webView, url, favicon) => {
@@ -262,8 +289,20 @@ function initWebviewProxy(webview, options) {
       let url = webResourceRequest.getUrl();
       let errorCode = webResourceError.getErrorCode();
       let description = webResourceError.getDescription();
-      console.trace(errorCode + ' ' + description + ' ' + url);
+      console.trace("onReceivedError: " + errorCode + ' ' + description + ' ' + url);
       sdkemitter.emit("onReceivedError", webView, webResourceRequest, webResourceError);
+    },
+    /**
+     * @see https://blog.csdn.net/lanlangaogao/article/details/120505181
+     * @param {android.webkit.WebView} webview
+     * @param {android.webkit.SslErrorHandler} handler
+     * @param {android.net.http.SslError} error
+     */
+    onReceivedSslError: (webview, handler, error) => {
+      console.trace("onReceivedSslError sslErrorHandler = [" + handler + "], sslError = [" + error + "]");
+      if (options.OmitSSLError) {
+        handler.proceed();
+      }
     },
   });
 
