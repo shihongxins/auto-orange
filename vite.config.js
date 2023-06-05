@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
   if (mode === "autoxjs-local") {
     const authorName = packageJson?.author?.name || "autoxjs";
     const projectName = packageJson.name || __dirname.split("\\").pop();
-    const projectVersion = JSON.stringify(packageJson.version);
+    const projectVersion = packageJson.version;
     const AppPackageName = `com.${authorName}.${projectName}`.replace(/[^\w.]/g, "_").toLowerCase();
 
     config.base = "./";
@@ -87,7 +87,7 @@ export default defineConfig(({ mode }) => {
                 contentsObj.name = contentsObj.name || projectName;
                 contentsObj.packageName = AppPackageName;
                 contentsObj.versionName = projectVersion;
-                contentsObj.versionCode = parseInt(projectVersion) || 0;
+                contentsObj.versionCode = parseInt(projectVersion) || 1;
                 contents = JSON.stringify(contentsObj);
               }
               return contents;
