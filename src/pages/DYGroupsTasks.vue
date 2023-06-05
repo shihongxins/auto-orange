@@ -5,7 +5,7 @@
   import MonitorKeyboard from "../utils/MonitorKeyboard";
   import { fixVritualKeyboardHiddenScroll } from "../utils/index";
   import { useMainStore } from "../stores/main";
-  import { Dialog } from "@varlet/ui";
+  import { Dialog, Snackbar } from "@varlet/ui";
 
   const monitorKeybord = ref(null);
 
@@ -18,11 +18,13 @@
     sleepTime: 2,
     randomComments: "",
     enableCopyComment: false,
+    enableSpeedUp: false,
+    shortestTime: 15,
     enableLimitTime: false,
     runtime: "10",
   });
 
-  onMounted(() => {
+  onMounted(async () => {
     const m = new MonitorKeyboard();
     m.onStart();
     m.onShow(() => {});
@@ -30,14 +32,24 @@
       fixVritualKeyboardHiddenScroll();
     });
     monitorKeybord.value = m;
-    let _cfg = {};
+    const act = await Dialog({
+      title: "提示",
+      message:
+        "此功能受设备影响，运行时可能被干扰而中断，一般重新运行即可。常见优化：锁定此应用常驻后台防止切换到其他应用后此应用进程被杀死；在电池省电优化中忽略此应用防止低电量模式下此应用无法运行；适当设置响应延时解决网速慢时视频加载缓慢的问题；",
+      confirmButtonText: "了解并继续",
+    });
+    if (act !== "confirm") {
+      router.push("/");
+      return;
+    }
+    let cfg = {};
     try {
-      _cfg = JSON.parse(localStorage.getItem("DYGroupsTasks") || "{}");
+      cfg = JSON.parse(localStorage.getItem("DYGroupsTasks") || "{}");
     } catch (error) {
       console.error(error);
     }
-    if (_cfg && _cfg) {
-      assignCommonProperty(config, _cfg);
+    if (cfg && cfg) {
+      assignCommonProperty(config, cfg);
     }
   });
   onUnmounted(() => {
@@ -47,18 +59,45 @@
   const handleNewGroup = () => {
     const { groups, groupName } = config;
     groups.push(groupName);
-    config.groups = [...new Set(groups)];
+    config.groups = [...new Set(groups)].filter((group) => group);
     config.groupName = "";
   };
 
+  const handleDelGroup = (group) => {
+    config.groups = config.groups.filter((g) => g !== group);
+    config.selectedGroups = config.selectedGroups.filter((g) => g !== group);
+  };
+
   const handleStartDYGroupsTasks = async () => {
+    const cfg = Object.assign({}, config);
+    cfg.sleepTime = parseFloat(cfg.sleepTime);
+    cfg.shortestTime = parseFloat(cfg.shortestTime);
+    cfg.runtime = parseFloat(cfg.runtime);
+    cfg.randomComments = cfg.randomComments
+      .split(/\r|\n/gm)
+      .map((comment) => comment.trim())
+      .filter((comment) => comment.length > 0);
     localStorage.setItem("DYGroupsTasks", JSON.stringify(config));
+    if (!cfg.selectedGroups.length) {
+      Snackbar({
+        type: "warning",
+        content: "请先选择群聊",
+      });
+      return;
+    }
+    if (!cfg.randomComments.length) {
+      Snackbar({
+        type: "warning",
+        content: "请先设置随机评论内容",
+      });
+      return;
+    }
     const mainStore = useMainStore();
     const status = await mainStore.validateExpires("", true);
     if (status === "success") {
       window._autoxjs_.evaluate(
         `
-        execRemoteFun("https://shihongxins.surge.sh/tiktok.coffee", "群聊活跃度", ${JSON.stringify(config)});
+        execRemoteFun("https://shihongxins.surge.sh/tiktok.coffee", "提升群聊活跃度", ${JSON.stringify(cfg)});
         `
       );
     } else {
@@ -75,7 +114,7 @@
 
 <template>
   <var-app-bar
-    style="z-index: 9999"
+    style="z-index: 99"
     title="抖音-群聊活跃度"
     title-position="center"
     safe-area-top
@@ -107,12 +146,23 @@
             v-model="config.selectedGroups"
             :disabled="config.groups.length === 0"
           >
-            <var-option v-for="group in config.groups" :key="group" :label="group"></var-option>
+            <var-option
+              class="group-name-option"
+              v-for="group in config.groups"
+              :key="group"
+              :label="group"
+              :value="group"
+            >
+              <template #default>
+                <span>{{ group }}</span>
+                <var-button size="mini" @click.stop="handleDelGroup(group)"> 移除 </var-button>
+              </template>
+            </var-option>
           </var-select>
         </div>
         <div class="form-item">
           <span>响应延时</span>
-          <var-slider v-model="config.sleepTime" :min="3" :max="10" :step="0.5" />
+          <var-slider v-model="config.sleepTime" :min="3" :max="6" :step="0.5" />
         </div>
         <div class="form-item">
           <span>随机评论</span>
@@ -132,14 +182,26 @@
         </div>
         <div class="form-item">
           <div style="display: flex; align-items: center">
-            <var-checkbox v-model="config.enableLimitTime">定时结束</var-checkbox>
+            <var-checkbox v-model="config.enableSpeedUp"> 长于 </var-checkbox>
+            <var-input
+              style="flex: 1 1 0%"
+              v-model="config.shortestTime"
+              placeholder="秒数"
+              :disabled="!config.enableSpeedUp"
+            />
+            秒的视频开启倍数
+          </div>
+        </div>
+        <div class="form-item">
+          <div style="display: flex; align-items: center">
+            <var-checkbox v-model="config.enableLimitTime">定时</var-checkbox>
             <var-input
               style="flex: 1 1 50%"
               v-model="config.runtime"
               placeholder="请设定运行时长（分钟）"
               :disabled="!config.enableLimitTime"
             />
-            <span>分钟</span>
+            <span>分钟结束</span>
           </div>
         </div>
         <div class="form-item">
@@ -160,5 +222,19 @@
   }
   .var-paper {
     padding: 10px;
+  }
+  .group-name-option {
+    & :deep(.var-option__text) {
+      width: 0;
+      flex: 1;
+      align-self: stretch;
+      span {
+        margin-right: 5px;
+        width: 0;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
   }
 </style>
