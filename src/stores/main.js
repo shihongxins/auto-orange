@@ -41,6 +41,7 @@ export const useMainStore = defineStore("main", {
             return response.ok ? response.json() : response.text() || response.statusText;
           })
           .catch((error) => error);
+        this.appInfo = info;
         if (!(info && info.enable)) {
           this.appNoticeType = "unusable";
           return;
@@ -53,11 +54,10 @@ export const useMainStore = defineStore("main", {
             window._autoxjs_.evaluate(`getVersion()`, resolve);
           }
         }).catch(() => false);
-        if (!(version === info.version || process.env.NODE_ENV === "development")) {
+        if (version !== info.version) {
           this.appNoticeType = "update";
           return;
         }
-        this.appInfo = info;
         this.appNoticeType = "intro";
       } catch (error) {
         this.appNoticeType = "error";

@@ -12,7 +12,19 @@
     }
   };
 
-  const update = () => {};
+  const update = () => {
+    if (window._autoxjs_) {
+      console.log(mainStore.appInfo);
+      window._autoxjs_.evaluate(
+        `
+          app.startActivity({
+            action: "android.intent.action.VIEW",
+            data: "${mainStore.appInfo.downloadUrl}"
+          });
+        `
+      );
+    }
+  };
 </script>
 
 <template>
