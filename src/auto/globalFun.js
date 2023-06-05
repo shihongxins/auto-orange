@@ -99,13 +99,14 @@ global.unlockApp = function unlockApp(id, price) {
     "标识不可修改：" + device.getAndroidId(),
   ])
     .then((result) => {
-      if (result && result.error) {
+      if (result && typeof result.error === "undefined") {
+        setTimeout(() => {
+          toastLog("跳转支付，成功后查看私信");
+        }, 1000);
+        return result;
+      } else {
         throw new Error(error);
       }
-      setTimeout(() => {
-        toastLog("跳转支付，成功后查看私信");
-      }, 1000);
-      return result;
     })
     .catch((error) => {
       toastLog("解锁支付失败");
