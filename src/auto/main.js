@@ -3,10 +3,15 @@
 
 global.SDKInstance = null;
 
+// 本地开发
+initUI("http://192.168.1.46:5173/");
+
+// 部署远程
 // initUI("https://auto-orange.shihongxins.surge.sh");
 
-global.localOrigin = "http://127.0.0.1:8080";
-initUI("./index.html", global.localOrigin);
+// 部署本地
+// global.localOrigin = "http://127.0.0.1:8080";
+// initUI("./index.html", global.localOrigin);
 
 /**
  * @see https://www.jianshu.com/p/6e69332cf946

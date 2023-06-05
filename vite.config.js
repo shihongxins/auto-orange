@@ -46,7 +46,6 @@ export default defineConfig(({ mode }) => {
       postcss: "postcss.config.cjs",
     },
     define: {
-      _autoxjs_: mode === "development" ? {} : null,
       projectVersion: JSON.stringify(packageJson.version),
     },
   };

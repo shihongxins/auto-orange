@@ -7,7 +7,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
     "build:autoxjs-local": "vite build -m autoxjs-local",
     "preview": "vite preview",
