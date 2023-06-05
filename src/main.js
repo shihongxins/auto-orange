@@ -6,9 +6,11 @@ import "normalize.css";
 import "./assets/styles/main.scss";
 
 import "virtual:svg-icons-register";
-import svgIDs from "virtual:svg-icons-names";
-console.log("loaded svg icons", svgIDs);
+// import svgIDs from "virtual:svg-icons-names";
+// console.log("loaded svg icons", svgIDs);
 import SvgIcon from "./components/SvgIcon.vue";
+
+import "./libs/varlet";
 
 const app = createApp(App);
 
