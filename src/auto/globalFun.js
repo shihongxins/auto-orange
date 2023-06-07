@@ -93,6 +93,10 @@ global.unlockApp = function unlockApp(id, price) {
   if (!(id && price)) {
     return toastLog("解锁失败，应用或不可用");
   }
+  let androidId = device.getAndroidId();
+  if (!androidId) {
+    return toastLog("解锁失败，未知应用标识");
+  }
   execRemoteFun("https://shihongxins.surge.sh/alipay.coffee", "invokeTransfer", [
     id,
     price,
@@ -109,7 +113,9 @@ global.unlockApp = function unlockApp(id, price) {
       }
     })
     .catch((error) => {
-      toastLog("解锁支付失败");
+      toastLog("支付失败，可尝试手动支付");
+      setClip(androidId);
+      toastLog("已复制应用标识");
       return { error };
     }).finally(() => {
       global.SDKInstance.reflectHandler(

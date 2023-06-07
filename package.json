@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.2.0",
+    "@vitejs/plugin-legacy": "^4.0.4",
     "@vitejs/plugin-vue": "^4.0.0",
     "@vue/eslint-config-prettier": "^7.1.0",
     "eslint": "^8.34.0",
@@ -38,6 +39,7 @@
     "prettier": "^2.8.8",
     "rollup-plugin-copy": "^3.4.0",
     "sass": "^1.62.1",
+    "terser": "^5.17.7",
     "unplugin-auto-import": "^0.15.3",
     "unplugin-vue-components": "^0.24.1",
     "vite": "^4.1.4",

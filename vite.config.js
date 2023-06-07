@@ -11,6 +11,7 @@ import { VarletUIResolver } from "unplugin-vue-components/resolvers";
 import copy from "rollup-plugin-copy";
 
 import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
+import legacy from "@vitejs/plugin-legacy";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -34,6 +35,9 @@ export default defineConfig(({ mode }) => {
       createSvgIconsPlugin({
         iconDirs: [path.resolve(process.cwd(), "src/assets/svgs")],
         symbolId: "icon-[dir]-[name]",
+      }),
+      legacy({
+        targets: ["defaults", "Android >= 49"],
       }),
     ],
     resolve: {
