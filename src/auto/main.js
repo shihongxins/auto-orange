@@ -65,7 +65,7 @@ if (!global.threadPool.back) {
       if (ui && ui.webview) {
         let url = ui.webview.getUrl();
         // 本地 html 模式，无法通过 webview.goBack() 返回，交由页面调用
-        if (url.indexOf(localOrigin) === 0) {
+        if (url.indexOf(global.localOrigin) === 0) {
           toastLog("无法响应返回/退出，请于应用内操作");
           ev.consumed = true;
           return;
