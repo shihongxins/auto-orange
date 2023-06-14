@@ -40,14 +40,20 @@ router.beforeEach((to) => {
   const mainStore = useMainStore();
   mainStore.validateExpires();
   if (to.meta?.theme?.color) {
-    if (window._autoxjs_) {
-      setTimeout(() => {
-        window._autoxjs_.evaluate(
-          `
-            ui.statusBarColor("${to.meta?.theme?.color}");
-          `
-        );
-      }, 0);
-    }
+    setAppStatusBarColor(to.meta?.theme?.color);
   }
 });
+
+function setAppStatusBarColor(hexColor) {
+  if (window._autoxjs_ && hexColor) {
+    setTimeout(() => {
+      window._autoxjs_.evaluate(
+        `
+          ui.statusBarColor("${hexColor}");
+        `
+      );
+    }, 0);
+  }
+}
+
+setAppStatusBarColor("#ffa500");
